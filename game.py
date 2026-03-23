@@ -29,7 +29,7 @@ class SpaceInvaders:
         self.high_score = 0
         self.selected_avatar = 0
         self.menu_index = 0
-        self.menu_items = ["Start joc", "Alege avatar"]
+        self.menu_items = ["Start Game", "Choose Avatar"]
         self._init_sounds()
         self._reset_session()
 
@@ -157,13 +157,13 @@ class SpaceInvaders:
                     break
 
     def _draw_hud(self):
-        score_text = self.font_med.render(f"SCOR: {self.player.score}", True, WHITE)
+        score_text = self.font_med.render(f"SCORE: {self.player.score}", True, WHITE)
         self.screen.blit(score_text, (10, 10))
 
         for index in range(self.player.lives):
             draw_player(self.screen, SCREEN_W - 60 - index * 55, 0, self.selected_avatar)
 
-        wave_text = self.font_med.render(f"VAL {self.wave}", True, CYAN)
+        wave_text = self.font_med.render(f"WAVE: {self.wave}", True, CYAN)
         self.screen.blit(wave_text, (SCREEN_W // 2 - wave_text.get_width() // 2, 10))
 
         pygame.draw.line(self.screen, GREEN, (0, SCREEN_H - 55), (SCREEN_W, SCREEN_H - 55), 2)
@@ -178,35 +178,34 @@ class SpaceInvaders:
         title = self.font_big.render("SPACE INVADERS", True, GREEN)
         self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 70))
 
-        subtitle = self.font_small.render("Meniu principal", True, LIGHT_GRAY)
+        subtitle = self.font_small.render("Main Menu", True, LIGHT_GRAY)
         self.screen.blit(subtitle, (SCREEN_W // 2 - subtitle.get_width() // 2, 130))
 
         for index, item in enumerate(self.menu_items):
             color = CYAN if index == self.menu_index else WHITE
             suffix = ""
-            if item == "Alege avatar":
+            if item == "Choose avatar":
                 suffix = f": {PLAYER_AVATARS[self.selected_avatar]['name']}"
             text = self.font_med.render(f"{'>' if index == self.menu_index else ' '} {item}{suffix}", True, color)
             self.screen.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 220 + index * 50))
 
         draw_player(self.screen, SCREEN_W // 2 - 25, 350, self.selected_avatar)
-        avatar_text = self.font_small.render(f"Avatar selectat: {PLAYER_AVATARS[self.selected_avatar]['name']}", True, LIGHT_GRAY)
+        avatar_text = self.font_small.render(f"Selected avatar: {PLAYER_AVATARS[self.selected_avatar]['name']}", True, LIGHT_GRAY)
         self.screen.blit(avatar_text, (SCREEN_W // 2 - avatar_text.get_width() // 2, 420))
 
         instructions = [
-            "SUS / JOS: navigare",
-            "ENTER: confirma",
-            "In joc: STANGA / DREAPTA si SPACE",
+            "MENU: UP / DOWN, ENTER",
+            "GAME: LEFT / RIGHT, SPACE",
         ]
         for index, line in enumerate(instructions):
             text = self.font_small.render(line, True, GRAY)
             self.screen.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 490 + index * 22))
 
     def _draw_avatar_menu(self):
-        title = self.font_big.render("ALEGE AVATAR", True, CYAN)
+        title = self.font_big.render("CHOOSE AVATAR", True, CYAN)
         self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 70))
 
-        hint = self.font_small.render("STANGA / DREAPTA pentru selectie, ENTER sau ESC pentru inapoi", True, LIGHT_GRAY)
+        hint = self.font_small.render(" LEFT / RIGHT for selection, ENTER / ESC for back", True, LIGHT_GRAY)
         self.screen.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, 130))
 
         spacing = 210
@@ -232,7 +231,7 @@ class SpaceInvaders:
             sub_text = self.font_med.render(sub, True, WHITE)
             self.screen.blit(sub_text, (SCREEN_W // 2 - sub_text.get_width() // 2, SCREEN_H // 2 + 10))
 
-        hint = self.font_small.render("ENTER = continua   ESC = meniu", True, LIGHT_GRAY)
+        hint = self.font_small.render("ENTER = Continue   |   ESC = Menu ", True,  WHITE)
         self.screen.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 70))
 
     def run(self):
@@ -328,7 +327,7 @@ class SpaceInvaders:
         self._draw_hud()
 
         if self.state == "dead":
-            sub = f"SCOR NOU RECORD: {self.player.score}!" if self.player.score >= self.high_score and self.player.score > 0 else f"Scor final: {self.player.score}"
+            sub = f"NEW HIGH SCORE: {self.player.score}!" if self.player.score >= self.high_score and self.player.score > 0 else f"Finale score: {self.player.score}"
             self._draw_overlay("GAME OVER", RED, sub)
         elif self.state == "win":
-            self._draw_overlay(f"VAL {self.wave} COMPLETAT!", GREEN, f"Scor: {self.player.score}  |  ENTER = Val {self.wave + 1}")
+            self._draw_overlay(f"WAVE {self.wave} COMPLETED!", GREEN, f"Score: {self.player.score}  |  ENTER = Val {self.wave + 1}")
