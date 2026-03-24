@@ -12,6 +12,7 @@ from sprites import PLAYER_AVATARS, draw_player, draw_stars
 
 class SpaceInvaders:
     def __init__(self):
+        pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
         pygame.mixer.init()
         self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
@@ -30,33 +31,37 @@ class SpaceInvaders:
         self.selected_avatar = 0
         self.menu_index = 0
         self.menu_items = ["Start Game", "Choose Avatar"]
+        self.pause_index = 0
+        self.pause_items = ["Resume","Change Avatar", "Quit Game"]
+        self.previous_state = "menu"
         self._init_sounds()
         self._reset_session()
 
     def _init_sounds(self):
-        sr = 44100
-        pygame.mixer.pre_init(sr, -16, 1, 512)
         try:
-            import numpy as np
+            self.sounds["shoot"] = pygame.mixer.Sound("assets/sounds/shoot.wav")
+            self.sounds["hit"] = pygame.mixer.Sound("assets/sounds/hit.wav")
+            self.sounds["explode"] = pygame.mixer.Sound("assets/sounds/explode.wav")
+            self.sounds["win"] = pygame.mixer.Sound("assets/sounds/win.wav")
+            self.sounds["fail"] = pygame.mixer.Sound("assets/sounds/fail.wav")
+            self.sounds["level"] = pygame.mixer.Sound("assets/sounds/win.wav")
 
-            def beep(freq, duration_ms, volume=0.3):
-                frames = int(sr * duration_ms / 1000)
-                timeline = np.linspace(0, duration_ms / 1000, frames, False)
-                wave = np.sign(np.sin(2 * np.pi * freq * timeline))
-                fade = np.linspace(1, 0, frames)
-                wave = (wave * fade * volume * 32767).astype(np.int16)
-                return pygame.sndarray.make_sound(wave)
+            self.sounds["shoot"].set_volume(0.4)
+            self.sounds["hit"].set_volume(0.3)
+            self.sounds["explode"].set_volume(0.4)
+            self.sounds["win"].set_volume(0.5)
+            self.sounds["fail"].set_volume(0.5)
 
-            self.sounds["shoot"] = beep(880, 80, 0.2)
-            self.sounds["explode"] = beep(110, 200, 0.4)
-            self.sounds["hit"] = beep(220, 150, 0.3)
-            self.sounds["level"] = beep(440, 400, 0.3)
-        except ImportError:
-            pass
+            print("Loaded sounds:", list(self.sounds.keys()))
+        except Exception as e:
+            print("Sound error:", e)
 
     def play(self, name):
         if name in self.sounds:
-            self.sounds[name].play()
+            if name == "shoot":
+                self.sounds[name].play(maxtime=200)
+            else:
+                self.sounds[name].play()
 
     def _reset_session(self):
         self.player = Player(self.selected_avatar)
@@ -258,7 +263,13 @@ class SpaceInvaders:
                 continue
 
             if event.key == pygame.K_ESCAPE:
-                if self.state in ("avatar_menu", "dead", "win", "playing"):
+                if self.state == "playing":
+                    self.state = "pause"
+                elif self.state == "pause":
+                    self.state = "playing"
+                elif self.state == "avatar_menu":
+                    self.state = self.previous_state
+                elif self.state in ("dead", "win"):
                     self.state = "menu"
                 continue
 
@@ -271,14 +282,17 @@ class SpaceInvaders:
                     if self.menu_index == 0:
                         self._start_game()
                     else:
+                        self.previous_state = "menu"
                         self.state = "avatar_menu"
             elif self.state == "avatar_menu":
                 if event.key == pygame.K_LEFT:
                     self.selected_avatar = (self.selected_avatar - 1) % len(PLAYER_AVATARS)
+                    self.player.avatar_index = self.selected_avatar
                 elif event.key == pygame.K_RIGHT:
                     self.selected_avatar = (self.selected_avatar + 1) % len(PLAYER_AVATARS)
+                    self.player.avatar_index = self.selected_avatar
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                    self.state = "menu"
+                    self.state = self.previous_state
             elif self.state == "dead":
                 if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._start_game()
@@ -286,10 +300,24 @@ class SpaceInvaders:
                 if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._next_wave()
 
+            elif self.state == "pause":
+                if event.key == pygame.K_UP:
+                    self.pause_index = (self.pause_index - 1) % len(self.pause_items)
+                elif event.key == pygame.K_DOWN:
+                    self.pause_index = (self.pause_index + 1) % len(self.pause_items)
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    if self.pause_index == 0:
+                        self.state = "playing"
+                    elif self.pause_index == 1:
+                        self.previous_state = "pause"
+                        self.state = "avatar_menu"
+                    else:
+                        self.state = "menu"
+
         if self.state == "playing":
             self.player.move(left, right)
-            if fire:
-                self.player.shoot()
+            if fire and self.player.shoot():
+                self.play("shoot")
 
     def _update(self):
         self._update_particles()
@@ -302,9 +330,11 @@ class SpaceInvaders:
 
         if not self.enemies.alive_list():
             self.state = "win"
+            self.play("win")
         if self.enemies.check_invasion():
             self.player.lives = 0
             self.state = "dead"
+            self.play("fail")
 
         self.high_score = max(self.high_score, self.player.score)
 
@@ -317,6 +347,9 @@ class SpaceInvaders:
             return
         if self.state == "avatar_menu":
             self._draw_avatar_menu()
+            return
+        if self.state == "pause":
+            self._draw_pause()
             return
 
         for barrier in self.barriers:
@@ -331,3 +364,15 @@ class SpaceInvaders:
             self._draw_overlay("GAME OVER", RED, sub)
         elif self.state == "win":
             self._draw_overlay(f"WAVE {self.wave} COMPLETED!", GREEN, f"Score: {self.player.score}  |  ENTER = Val {self.wave + 1}")
+
+    def _draw_pause(self):
+        overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.screen.blit(overlay, (0, 0))
+        title = self.font_big.render("PAUSED", True, CYAN)
+        self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 150))
+
+        for i, item in enumerate(self.pause_items):
+            color = GREEN if i == self.pause_index else WHITE
+            text = self.font_med.render(item, True, color)
+            self.screen.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 250 + i * 50))

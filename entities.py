@@ -1,5 +1,6 @@
 import random
 import pygame
+from numpy.ma.core import true_divide
 
 from constants import CYAN, ORANGE, PURPLE, RED, SCREEN_H, SCREEN_W, YELLOW
 from sprites import draw_barrier, draw_bullet, draw_enemy_type1, draw_enemy_type2, draw_enemy_type3, draw_player
@@ -29,6 +30,8 @@ class Player:
             center_x = self.x + self.w // 2
             self.bullets.append([center_x, self.y])
             self.shoot_cooldown = 20
+            return  True
+        return False
 
     def update(self):
         if self.shoot_cooldown > 0:
