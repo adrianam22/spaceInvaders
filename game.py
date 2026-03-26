@@ -1,14 +1,10 @@
 import math
 import random
 import sys
-
 import pygame
-
-from android_server import AndroidServer
 from constants import BLACK, CYAN, FPS, GRAY, GREEN, LIGHT_GRAY, ORANGE, RED, SCREEN_H, SCREEN_W, TITLE, WHITE, YELLOW
 from entities import Barrier, EnemyGrid, Player
 from sprites import PLAYER_AVATARS, draw_player, draw_stars
-
 
 class SpaceInvaders:
     def __init__(self):
@@ -23,9 +19,6 @@ class SpaceInvaders:
         self.font_med = pygame.font.SysFont("consolas", 28)
         self.font_small = pygame.font.SysFont("consolas", 18)
 
-        self.server = AndroidServer(port=5555)
-        self.server.start()
-
         self.sounds = {}
         self.high_score = 0
         self.selected_avatar = 0
@@ -38,23 +31,18 @@ class SpaceInvaders:
         self._reset_session()
 
     def _init_sounds(self):
-        try:
-            self.sounds["shoot"] = pygame.mixer.Sound("assets/sounds/shoot.wav")
-            self.sounds["hit"] = pygame.mixer.Sound("assets/sounds/hit.wav")
-            self.sounds["explode"] = pygame.mixer.Sound("assets/sounds/explode.wav")
+            self.sounds["shoot"] = pygame.mixer.Sound("assets/sounds/laser.wav")
+            self.sounds["hit"] = pygame.mixer.Sound("assets/sounds/Boom.wav")
+            self.sounds["explode"] = pygame.mixer.Sound("assets/sounds/Boom.wav")
             self.sounds["win"] = pygame.mixer.Sound("assets/sounds/win.wav")
             self.sounds["fail"] = pygame.mixer.Sound("assets/sounds/fail.wav")
             self.sounds["level"] = pygame.mixer.Sound("assets/sounds/win.wav")
 
             self.sounds["shoot"].set_volume(0.4)
             self.sounds["hit"].set_volume(0.3)
-            self.sounds["explode"].set_volume(0.4)
+            self.sounds["explode"].set_volume(0.3)
             self.sounds["win"].set_volume(0.5)
             self.sounds["fail"].set_volume(0.5)
-
-            print("Loaded sounds:", list(self.sounds.keys()))
-        except Exception as e:
-            print("Sound error:", e)
 
     def play(self, name):
         if name in self.sounds:
@@ -152,6 +140,7 @@ class SpaceInvaders:
                 self.play("hit")
                 if self.player.lives <= 0:
                     self.state = "dead"
+                    self.play("fail")
 
         for bullet in self.player.bullets[:]:
             bx, by = bullet
@@ -172,9 +161,6 @@ class SpaceInvaders:
         self.screen.blit(wave_text, (SCREEN_W // 2 - wave_text.get_width() // 2, 10))
 
         pygame.draw.line(self.screen, GREEN, (0, SCREEN_H - 55), (SCREEN_W, SCREEN_H - 55), 2)
-
-        ip_text = self.font_small.render(f"Android: {self.server.server_ip}:5555", True, GRAY)
-        self.screen.blit(ip_text, (10, SCREEN_H - 22))
 
         high_score_text = self.font_small.render(f"Record: {self.high_score}", True, LIGHT_GRAY)
         self.screen.blit(high_score_text, (SCREEN_W - high_score_text.get_width() - 10, SCREEN_H - 22))
@@ -249,14 +235,12 @@ class SpaceInvaders:
 
     def _handle_events(self):
         kb = pygame.key.get_pressed()
-        android = self.server.get_commands()
-        left = kb[pygame.K_LEFT] or android.get("left", False)
-        right = kb[pygame.K_RIGHT] or android.get("right", False)
-        fire = kb[pygame.K_SPACE] or android.get("fire", False)
+        left = kb[pygame.K_LEFT]
+        right = kb[pygame.K_RIGHT]
+        fire = kb[pygame.K_SPACE]
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.server.stop()
                 pygame.quit()
                 sys.exit()
             if event.type != pygame.KEYDOWN:
