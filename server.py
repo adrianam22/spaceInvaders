@@ -16,7 +16,7 @@ class SpaceInvadersServer:
         self._accept_thread = None
 
     def get_local_ip(self):
-        """Detecteaza adresa IP activa a calculatorului in retea."""
+        """Detects the active IP address of the computer on the network."""
         try:
             probe_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             probe_socket.connect(("8.8.8.8", 80))
@@ -27,7 +27,7 @@ class SpaceInvadersServer:
             return "127.0.0.1"
 
     def start(self):
-        """Porneste serverul TCP fara sa blocheze bucla jocului."""
+        """Start the TCP server without blocking the game loop."""
         if self.running:
             return
 
@@ -40,10 +40,10 @@ class SpaceInvadersServer:
         real_ip = self.get_local_ip()
         print("=" * 50)
         print("SERVER ACTIV!")
-        print(f"Introdu aceasta adresa pe telefon: {real_ip}")
+        print(f"Enter this address on your phone: {real_ip}")
         print(f"Port: {self.port}")
         print("=" * 50)
-        print("Astept conectarea telefonului...")
+        print("Waiting for the phone to connect...")
 
         self._accept_thread = threading.Thread(target=self._accept_client, daemon=True)
         self._accept_thread.start()
@@ -54,7 +54,7 @@ class SpaceInvadersServer:
         except OSError:
             return
 
-        print(f"Telefon conectat de la adresa: {addr}")
+        print(f"Phone connected from address: {addr}")
         threading.Thread(target=self._listen_for_commands, daemon=True).start()
 
     def _listen_for_commands(self):
@@ -72,12 +72,12 @@ class SpaceInvadersServer:
                     if not command:
                         continue
 
-                    print(f"Comanda primita: {command}")
+                    print(f"Order received: {command}")
                     with self._lock:
                         self.pending_commands.append(command)
         except Exception as error:
             if self.running:
-                print(f"Eroare la receptie: {error}")
+                print(f"Reception error: {error}")
         finally:
             self._close_client()
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     try:
         while True:
             for command in server.pop_commands():
-                print(f"Procesat: {command}")
+                print(f"Processing: {command}")
             time.sleep(0.1)
     except KeyboardInterrupt:
         server.stop()

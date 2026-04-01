@@ -74,7 +74,7 @@ class SpaceInvaders:
     def _change_state(self, new_state):
         if self.state == new_state:
             return
-
+        old_state = self.state
         self.state = new_state
         if self.server:
             self.server.send_state_signal(new_state.upper())
@@ -82,6 +82,12 @@ class SpaceInvaders:
                 self.server.send_message("GAME_OVER")
             elif new_state == "win":
                 self.server.send_message("WINNER")
+           # elif new_state == "pause":
+            #    self.server.send_message("PAUSE")
+            #elif new_state == "playing" and old_state == "pause":
+             #   self.server.send_message("RESUME")
+            elif new_state == "menu":
+                self.server.send_message("MENU")
 
     def _start_game(self):
         self.player = Player(self.selected_avatar)
@@ -273,7 +279,7 @@ class SpaceInvaders:
         countdown = self.font_big.render(str(remaining_seconds), True, WHITE)
         self.screen.blit(countdown, (SCREEN_W // 2 - countdown.get_width() // 2, SCREEN_H // 2 - 10))
 
-        hint = self.font_small.render("Telefonul termina numaratoarea, apoi incepe jocul", True, LIGHT_GRAY)
+        hint = self.font_small.render("The phone finishes counting, then the game begins", True, LIGHT_GRAY)
         self.screen.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 60))
 
     def _handle_virtual_key(self, key):
@@ -326,6 +332,7 @@ class SpaceInvaders:
                     self.previous_state = "pause"
                     self._change_state("avatar_menu")
                 else:
+                    self._reset_session()
                     self._change_state("menu")
 
     def _handle_remote_command(self, command):
@@ -353,12 +360,23 @@ class SpaceInvaders:
         if command == "LEFT":
             if self.state == "playing":
                 self.remote_left_once = True
+            elif self.state == "avatar_menu":
+                self.selected_avatar = (self.selected_avatar - 1) % len(PLAYER_AVATARS)
+                self.player.avatar_index = self.selected_avatar
+                if self.server:
+                    self.server.send_message(f"AVATAR:{self.selected_avatar}")
             else:
                 self._handle_virtual_key(pygame.K_LEFT)
             return
+
         if command == "RIGHT":
             if self.state == "playing":
                 self.remote_right_once = True
+            elif self.state == "avatar_menu":
+                self.selected_avatar = (self.selected_avatar + 1) % len(PLAYER_AVATARS)
+                self.player.avatar_index = self.selected_avatar
+                if self.server:
+                    self.server.send_message(f"AVATAR:{self.selected_avatar}")
             else:
                 self._handle_virtual_key(pygame.K_RIGHT)
             return
@@ -371,7 +389,15 @@ class SpaceInvaders:
         if command in {"ENTER", "SELECT", "START"}:
             self._handle_virtual_key(pygame.K_RETURN)
             return
-        if command in {"BACK", "ESC", "ESCAPE", "PAUSE"}:
+        if command == "AVATAR_MENU":
+            if self.state == "menu":
+                self.previous_state = "menu"
+                self._change_state("avatar_menu")
+            elif self.state == "playing":
+                self.previous_state = "playing"
+                self._change_state("avatar_menu")
+            return
+        if command in {"BACK", "ESC", "ESCAPE"}:
             self._handle_virtual_key(pygame.K_ESCAPE)
 
     def _consume_server_commands(self):
