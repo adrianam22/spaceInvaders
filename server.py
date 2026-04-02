@@ -16,7 +16,6 @@ class SpaceInvadersServer:
         self._accept_thread = None
 
     def get_local_ip(self):
-        """Detects the active IP address of the computer on the network."""
         try:
             probe_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             probe_socket.connect(("8.8.8.8", 80))
@@ -26,24 +25,32 @@ class SpaceInvadersServer:
         except Exception:
             return "127.0.0.1"
 
-    def start(self):
-        """Start the TCP server without blocking the game loop."""
-        if self.running:
-            return
+    def _create_server_socket(self):
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind((self.host, self.port))
+        server_socket.listen(1)
+        return server_socket
 
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_socket.bind((self.host, self.port))
-        self.server_socket.listen(1)
-        self.running = True
-
-        real_ip = self.get_local_ip()
+    def _print_startup_banner(self, real_ip):
         print("=" * 50)
         print("SERVER ACTIV!")
         print(f"Enter this address on your phone: {real_ip}")
-        print(f"Port: {self.port}")
-        print("=" * 50)
         print("Waiting for the phone to connect...")
+
+    def _queue_command(self, command):
+        with self._lock:
+            self.pending_commands.append(command)
+
+    def start(self):
+        if self.running:
+            return
+
+        self.server_socket = self._create_server_socket()
+        self.running = True
+
+        real_ip = self.get_local_ip()
+        self._print_startup_banner(real_ip)
 
         self._accept_thread = threading.Thread(target=self._accept_client, daemon=True)
         self._accept_thread.start()
@@ -72,9 +79,7 @@ class SpaceInvadersServer:
                     if not command:
                         continue
 
-                    print(f"Order received: {command}")
-                    with self._lock:
-                        self.pending_commands.append(command)
+                    self._queue_command(command)
         except Exception as error:
             if self.running:
                 print(f"Reception error: {error}")

@@ -4,9 +4,10 @@ import sys
 
 import pygame
 
-from constants import BLACK, CYAN, FPS, GRAY, GREEN, LIGHT_GRAY, ORANGE, RED, SCREEN_H, SCREEN_W, TITLE, WHITE, YELLOW
+from constants import BLACK, FPS, GREEN, ORANGE, RED, SCREEN_H, SCREEN_W, TITLE, YELLOW
 from entities import Barrier, EnemyGrid, Player
-from sprites import PLAYER_AVATARS, draw_player, draw_stars
+from sprites import PLAYER_AVATARS, draw_stars
+from ui_screens import draw_avatar_menu, draw_countdown_overlay, draw_hud, draw_menu, draw_overlay, draw_pause
 
 
 class SpaceInvaders:
@@ -190,97 +191,19 @@ class SpaceInvaders:
                     break
 
     def _draw_hud(self):
-        score_text = self.font_med.render(f"SCORE: {self.player.score}", True, WHITE)
-        self.screen.blit(score_text, (10, 10))
-
-        for index in range(self.player.lives):
-            draw_player(self.screen, SCREEN_W - 60 - index * 55, 0, self.selected_avatar)
-
-        wave_text = self.font_med.render(f"WAVE: {self.wave}", True, CYAN)
-        self.screen.blit(wave_text, (SCREEN_W // 2 - wave_text.get_width() // 2, 10))
-
-        pygame.draw.line(self.screen, GREEN, (0, SCREEN_H - 55), (SCREEN_W, SCREEN_H - 55), 2)
-
-        high_score_text = self.font_small.render(f"Record: {self.high_score}", True, LIGHT_GRAY)
-        self.screen.blit(high_score_text, (SCREEN_W - high_score_text.get_width() - 10, SCREEN_H - 22))
+        draw_hud(self.screen, self.font_med, self.font_small, self.player, self.selected_avatar, self.high_score, self.wave)
 
     def _draw_menu(self):
-        title = self.font_big.render("SPACE INVADERS", True, GREEN)
-        self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 70))
-
-        subtitle = self.font_small.render("Main Menu", True, LIGHT_GRAY)
-        self.screen.blit(subtitle, (SCREEN_W // 2 - subtitle.get_width() // 2, 130))
-
-        for index, item in enumerate(self.menu_items):
-            color = CYAN if index == self.menu_index else WHITE
-            suffix = ""
-            if item == "Choose Avatar":
-                suffix = f": {PLAYER_AVATARS[self.selected_avatar]['name']}"
-            text = self.font_med.render(f"{'>' if index == self.menu_index else ' '} {item}{suffix}", True, color)
-            self.screen.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 220 + index * 50))
-
-        draw_player(self.screen, SCREEN_W // 2 - 25, 350, self.selected_avatar)
-        avatar_text = self.font_small.render(f"Selected avatar: {PLAYER_AVATARS[self.selected_avatar]['name']}", True, LIGHT_GRAY)
-        self.screen.blit(avatar_text, (SCREEN_W // 2 - avatar_text.get_width() // 2, 420))
-
-        instructions = [
-            "MENU: UP / DOWN, ENTER",
-            "GAME: LEFT / RIGHT, SPACE",
-            "MOBILE: UP / DOWN / LEFT / RIGHT / FIRE / SELECT / BACK",
-        ]
-        for index, line in enumerate(instructions):
-            text = self.font_small.render(line, True, GRAY)
-            self.screen.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 490 + index * 22))
+        draw_menu(self.screen, self.font_big, self.font_med, self.font_small, self.menu_items, self.menu_index, self.selected_avatar)
 
     def _draw_avatar_menu(self):
-        title = self.font_big.render("CHOOSE AVATAR", True, CYAN)
-        self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 70))
-
-        hint = self.font_small.render("LEFT / RIGHT for selection, ENTER / ESC for back", True, LIGHT_GRAY)
-        self.screen.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, 130))
-
-        spacing = 210
-        start_x = SCREEN_W // 2 - spacing
-        for index, avatar in enumerate(PLAYER_AVATARS):
-            x = start_x + index * spacing
-            y = 260
-            if index == self.selected_avatar:
-                pygame.draw.rect(self.screen, CYAN, (x - 30, y - 40, 110, 140), 3, border_radius=10)
-            draw_player(self.screen, x, y, index)
-            label = self.font_small.render(avatar["name"], True, WHITE if index == self.selected_avatar else GRAY)
-            self.screen.blit(label, (x + 25 - label.get_width() // 2, y + 70))
+        draw_avatar_menu(self.screen, self.font_big, self.font_small, self.selected_avatar)
 
     def _draw_overlay(self, title, color, sub=""):
-        overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 160))
-        self.screen.blit(overlay, (0, 0))
-
-        title_text = self.font_big.render(title, True, color)
-        self.screen.blit(title_text, (SCREEN_W // 2 - title_text.get_width() // 2, SCREEN_H // 2 - 60))
-
-        if sub:
-            sub_text = self.font_med.render(sub, True, WHITE)
-            self.screen.blit(sub_text, (SCREEN_W // 2 - sub_text.get_width() // 2, SCREEN_H // 2 + 10))
-
-        hint = self.font_small.render("ENTER = Continue   |   ESC = Menu", True, WHITE)
-        self.screen.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 70))
+        draw_overlay(self.screen, self.font_big, self.font_med, self.font_small, title, color, sub)
 
     def _draw_countdown_overlay(self):
-        remaining_ms = max(0, self.countdown_end_time - pygame.time.get_ticks())
-        remaining_seconds = max(1, math.ceil(remaining_ms / 1000))
-
-        overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 160))
-        self.screen.blit(overlay, (0, 0))
-
-        title = self.font_big.render("GET READY", True, CYAN)
-        self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, SCREEN_H // 2 - 80))
-
-        countdown = self.font_big.render(str(remaining_seconds), True, WHITE)
-        self.screen.blit(countdown, (SCREEN_W // 2 - countdown.get_width() // 2, SCREEN_H // 2 - 10))
-
-        hint = self.font_small.render("The phone finishes counting, then the game begins", True, LIGHT_GRAY)
-        self.screen.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 60))
+        draw_countdown_overlay(self.screen, self.font_big, self.font_small, self.countdown_end_time)
 
     def _handle_virtual_key(self, key):
         if key == pygame.K_ESCAPE:
@@ -503,13 +426,4 @@ class SpaceInvaders:
             self._draw_overlay(f"WAVE {self.wave} COMPLETED!", GREEN, f"Score: {self.player.score}  |  ENTER = Wave {self.wave + 1}")
 
     def _draw_pause(self):
-        overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        self.screen.blit(overlay, (0, 0))
-        title = self.font_big.render("PAUSED", True, CYAN)
-        self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 150))
-
-        for index, item in enumerate(self.pause_items):
-            color = GREEN if index == self.pause_index else WHITE
-            text = self.font_med.render(item, True, color)
-            self.screen.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 250 + index * 50))
+        draw_pause(self.screen, self.font_big, self.font_med, self.pause_items, self.pause_index)
